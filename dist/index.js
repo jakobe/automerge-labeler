@@ -527,23 +527,18 @@ function getPullRequestsWithLabels() {
         //       core.error(error);
         //       core.setFailed(error.message);
         //     });
-        const result = yield octokit.graphql(`
-    {
-      repository(owner: "octokit", name: "graphql.js") {
-        issues(last: 3) {
-          edges {
-            node {
+        const result = yield octokit.graphql(`query getApprovedPullRequestsWithLabels($query:String!) {
+          search(query: $query, type: ISSUE, first: 3) {
+            issueCount
+             edges {
+                node {
               title
             }
           }
         }
       }
     }
-  `, {
-            headers: {
-                authorization: `token secret123`
-            }
-        });
+  `, { query: `repo:octokit/graphql.js is:pr is:open` });
         core.info(`query result: ${JSON.stringify(result)}`);
         return result;
     });
