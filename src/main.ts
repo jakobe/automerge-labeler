@@ -5,14 +5,18 @@ async function run() {
     const label = core.getInput("label", { required: true });
     const order = core.getInput("order") as "first" | "last";
     const sortOrder = order === "first" ? "asc" : "desc";
-    console.log(`Looking for pull request ${order} labelled by:`, label);
+    console.log(
+      `Looking for approved pull request ${order} labelled by: [${label}]`
+    );
     const pullRequest = findPullRequest(label, sortOrder);
     if (pullRequest) {
       const output = JSON.stringify(pullRequest);
       console.log("Found pull request:", output);
       core.setOutput("pull_request", output);
     } else {
-      console.log("No pull request found matching the label:", label);
+      console.log(
+        `No approved pull request(s) found matching the label: [${label}]`
+      );
     }
   } catch (error) {
     core.error(error);
@@ -22,12 +26,12 @@ async function run() {
 
 function findPullRequest(
   label: string,
-  sortOrder?: "asc" | "desc"
+  sortOrder: "asc" | "desc"
 ): LabeledPullRequest {
   const payloadFromGraphQl = {
     data: {
       search: {
-        issueCount: 1,
+        issueCount: 2,
         edges: [
           {
             node: {
@@ -39,8 +43,44 @@ function findPullRequest(
                 edges: [
                   {
                     node: {
+                      __typename: "UnlabeledEvent",
+                      createdAt: "2020-03-22T15:45:54Z",
+                      label: {
+                        name: "merge:ready"
+                      }
+                    }
+                  },
+                  {
+                    node: {
                       __typename: "LabeledEvent",
                       createdAt: "2020-03-23T15:45:54Z",
+                      actor: {
+                        login: "hafstad"
+                      },
+                      label: {
+                        name: "merge:ready"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            node: {
+              title: "2 - Update main.yml",
+              url: "https://github.com/jakobe/github-actions-test/pull/2",
+              number: 2,
+              state: "OPEN",
+              timelineItems: {
+                edges: [
+                  {
+                    node: {
+                      __typename: "LabeledEvent",
+                      createdAt: "2020-04-23T15:45:54Z",
+                      actor: {
+                        login: "jakobe"
+                      },
                       label: {
                         name: "merge:ready"
                       }
@@ -56,26 +96,36 @@ function findPullRequest(
   };
   const nextUp = payloadFromGraphQl.data.search.edges
     .map(pr => {
-      const labelDateCreated = pr.node.timelineItems.edges
-        .filter(labeledEvent => labeledEvent.node.label.name === "enhancement")
-        .sort(sortByProperty(labeledEvent => labeledEvent.node.createdAt))
-        .map(labeledEvent =>
-          labeledEvent.node.__typename === "LabeledEvent"
-            ? labeledEvent.node.createdAt
-            : ""
-        )[0];
+      const matchingLabels = pr.node.timelineItems.edges
+        .filter(labeledEvent => labeledEvent.node.label.name === label)
+        // Order by latest applied:
+        .sort(
+          sortByProperty(labeledEvent => labeledEvent.node.createdAt, "desc")
+        )
+        .map(
+          labeledEvent =>
+            labeledEvent.node.__typename === "LabeledEvent"
+              ? {
+                  name: labeledEvent.node.label.name,
+                  createdAt: labeledEvent.node.createdAt,
+                  createdBy: labeledEvent.node.actor?.login
+                }
+              : undefined //Return UnlabeledEvent as undefined
+        );
+      const latestLabel = matchingLabels[0];
       return {
         title: pr.node.title,
         url: pr.node.url,
-        dateLabeled: labelDateCreated
+        label: latestLabel
       };
     })
-    .filter(pr => !!pr.dateLabeled)
-    .sort(sortByProperty(pr => pr.dateLabeled))[0];
+    .filter(pr => !!pr.label)
+    .sort(sortByProperty(pr => pr.label!.createdAt, sortOrder))[0];
   return nextUp;
 }
 
-type LabeledPullRequest = { title: string; url: string; dateLabeled: string };
+type Label = { name: string; createdAt: string };
+type LabeledPullRequest = { title: string; url: string; label?: Label };
 
 function sortBy<T>(
   getProperty: (obj: T) => string,
@@ -90,7 +140,7 @@ function sortBy<T>(
 
 function sortByProperty<T>(
   getProperty: (obj: T) => string,
-  direction: "asc" | "desc" = "asc"
+  direction: "asc" | "desc"
 ): (a: T, b: T) => number {
   return (a: T, b: T) => {
     return sortBy(getProperty, direction, a, b);
