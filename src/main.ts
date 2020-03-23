@@ -31,6 +31,7 @@ async function run() {
 async function getPullRequestsWithLabels() {
   const octokit = new Octokit();
   const repo = process?.env?.GITHUB_REPOSITORY;
+  core.info(`repo: ${repo}`);
   const result = await octokit.graphql(
     `query getApprovedPullRequestsWithLabels($query:String!) {
     search(query: $query, type: ISSUE, first: 100) {
@@ -71,6 +72,7 @@ async function getPullRequestsWithLabels() {
 }`,
     { query: `repo:${repo} is:pr is:open review:approved'` }
   );
+  core.info(`query result: ${JSON.stringify(result)}`);
   return result;
 }
 

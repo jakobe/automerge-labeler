@@ -481,6 +481,7 @@ function getPullRequestsWithLabels() {
     return __awaiter(this, void 0, void 0, function* () {
         const octokit = new action_1.Octokit();
         const repo = (_a = process === null || process === void 0 ? void 0 : process.env) === null || _a === void 0 ? void 0 : _a.GITHUB_REPOSITORY;
+        core.info(`repo: ${repo}`);
         const result = yield octokit.graphql(`query getApprovedPullRequestsWithLabels($query:String!) {
     search(query: $query, type: ISSUE, first: 100) {
       issueCount
@@ -518,6 +519,7 @@ function getPullRequestsWithLabels() {
       }
     }
 }`, { query: `repo:${repo} is:pr is:open review:approved'` });
+        core.info(`query result: ${JSON.stringify(result)}`);
         return result;
     });
 }
