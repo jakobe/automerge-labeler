@@ -5,8 +5,15 @@ async function run() {
     const label = core.getInput("label", { required: true });
     const order = core.getInput("order") as "first" | "last";
     const sortOrder = order === "first" ? "asc" : "desc";
+    console.log(`Looking for pull request ${order} labelled by:`, label);
     const pullRequest = findPullRequest(label, sortOrder);
-    console.log(JSON.stringify(pullRequest));
+    if (pullRequest) {
+      const output = JSON.stringify(pullRequest);
+      console.log("Found pull request:", output);
+      core.setOutput("pull_request", output);
+    } else {
+      console.log("No pull request found matching the label:", label);
+    }
   } catch (error) {
     core.error(error);
     core.setFailed(error.message);
