@@ -1,5 +1,7 @@
 import * as core from "@actions/core";
 
+import { Octokit } from "@octokit/action";
+
 async function run() {
   try {
     const label = core.getInput("label", { required: true });
@@ -8,6 +10,8 @@ async function run() {
     core.info(
       `Looking for approved pull request ${order} labelled by: [${label}]`
     );
+    const data = await getPullRequestsWithLabels();
+    core.info(`data from graphQl: ${data}`);
     const pullRequest = findPullRequest(label, sortOrder);
     if (pullRequest) {
       const output = JSON.stringify(pullRequest);
@@ -22,6 +26,52 @@ async function run() {
     core.error(error);
     core.setFailed(error.message);
   }
+}
+
+async function getPullRequestsWithLabels() {
+  const octokit = new Octokit();
+  const repo = process?.env?.GITHUB_REPOSITORY;
+  const result = await octokit.graphql(
+    `query getApprovedPullRequestsWithLabels($query:String!) {
+    search(query: $query, type: ISSUE, first: 100) {
+      issueCount
+       edges {
+        node {
+          ... on PullRequest {
+            title
+            url
+            number
+            state
+            timelineItems(last: 100, itemTypes: [LABELED_EVENT, UNLABELED_EVENT]) {
+              edges {
+                node {
+                  __typename
+                  ... on LabeledEvent {
+                    createdAt
+                    actor {
+                      login
+                    }
+                    label {
+                      name
+                    }
+                  }
+                  ... on UnlabeledEvent {
+                    createdAt
+                    label {
+                      name
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+}`,
+    { query: `repo:${repo} is:pr is:open review:approved'` }
+  );
+  return result;
 }
 
 function findPullRequest(
