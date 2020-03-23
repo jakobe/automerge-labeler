@@ -32,8 +32,9 @@ async function getPullRequestsWithLabels() {
   const octokit = new Octokit();
   const repo = process?.env?.GITHUB_REPOSITORY;
   core.info(`repo: ${repo}`);
-  const result = await octokit.graphql(
-    `query getApprovedPullRequestsWithLabels($query:String!) {
+  const result = await octokit
+    .graphql(
+      `query getApprovedPullRequestsWithLabels($query:String!) {
     search(query: $query, type: ISSUE, first: 100) {
       issueCount
        edges {
@@ -70,8 +71,12 @@ async function getPullRequestsWithLabels() {
       }
     }
 }`,
-    { query: `repo:${repo} is:pr is:open review:approved'` }
-  );
+      { query: `repo:${repo} is:pr is:open review:approved'` }
+    )
+    .catch(error => {
+      core.error(error);
+      core.setFailed(error.message);
+    });
   core.info(`query result: ${JSON.stringify(result)}`);
   return result;
 }
