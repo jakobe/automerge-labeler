@@ -482,47 +482,67 @@ function getPullRequestsWithLabels() {
         const octokit = new action_1.Octokit();
         const repo = (_a = process === null || process === void 0 ? void 0 : process.env) === null || _a === void 0 ? void 0 : _a.GITHUB_REPOSITORY;
         core.info(`repo: ${repo}`);
-        const result = yield octokit
-            .graphql(`query getApprovedPullRequestsWithLabels($query:String!) {
-    search(query: $query, type: ISSUE, first: 100) {
-      issueCount
-       edges {
-        node {
-          ... on PullRequest {
-            title
-            url
-            number
-            state
-            timelineItems(last: 100, itemTypes: [LABELED_EVENT, UNLABELED_EVENT]) {
-              edges {
-                node {
-                  __typename
-                  ... on LabeledEvent {
-                    createdAt
-                    actor {
-                      login
-                    }
-                    label {
-                      name
-                    }
-                  }
-                  ... on UnlabeledEvent {
-                    createdAt
-                    label {
-                      name
-                    }
-                  }
-                }
-              }
+        //   const result = await octokit
+        //     .graphql(
+        //       `query getApprovedPullRequestsWithLabels($query:String!) {
+        //     search(query: $query, type: ISSUE, first: 100) {
+        //       issueCount
+        //        edges {
+        //         node {
+        //           ... on PullRequest {
+        //             title
+        //             url
+        //             number
+        //             state
+        //             timelineItems(last: 100, itemTypes: [LABELED_EVENT, UNLABELED_EVENT]) {
+        //               edges {
+        //                 node {
+        //                   __typename
+        //                   ... on LabeledEvent {
+        //                     createdAt
+        //                     actor {
+        //                       login
+        //                     }
+        //                     label {
+        //                       name
+        //                     }
+        //                   }
+        //                   ... on UnlabeledEvent {
+        //                     createdAt
+        //                     label {
+        //                       name
+        //                     }
+        //                   }
+        //                 }
+        //               }
+        //             }
+        //           }
+        //         }
+        //       }
+        //     }
+        // }`,
+        //       { query: `repo:${repo} is:pr is:open review:approved'` }
+        //     )
+        //     .catch(error => {
+        //       core.error(error);
+        //       core.setFailed(error.message);
+        //     });
+        const result = yield octokit.graphql(`
+    {
+      repository(owner: "octokit", name: "graphql.js") {
+        issues(last: 3) {
+          edges {
+            node {
+              title
             }
           }
         }
       }
     }
-}`, { query: `repo:${repo} is:pr is:open review:approved'` })
-            .catch(error => {
-            core.error(error);
-            core.setFailed(error.message);
+  `, {
+            headers: {
+                authorization: `token secret123`
+            }
         });
         core.info(`query result: ${JSON.stringify(result)}`);
         return result;
