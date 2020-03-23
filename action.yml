@@ -1,0 +1,16 @@
+name: "Find Pull Request"
+description: "Find first or last pull request mathcing a given label."
+inputs:
+  label:
+    description: "Which label to filter pull requests by"
+    required: true
+  order:
+    description: "Whether to find the pull request that was first or last labelled by the given label."
+    required: false
+    default: "first"
+outputs:
+  pull_request:
+    description: "The first or last pull request matching the given label (if found)"
+runs:
+  using: "node12"
+  main: "dist/index.js"
