@@ -5,16 +5,16 @@ async function run() {
     const label = core.getInput("label", { required: true });
     const order = core.getInput("order") as "first" | "last";
     const sortOrder = order === "first" ? "asc" : "desc";
-    console.log(
+    core.info(
       `Looking for approved pull request ${order} labelled by: [${label}]`
     );
     const pullRequest = findPullRequest(label, sortOrder);
     if (pullRequest) {
       const output = JSON.stringify(pullRequest);
-      console.log("Found pull request:", output);
+      core.info(`Found pull request:\n'${output}'`);
       core.setOutput("pull_request", output);
     } else {
-      console.log(
+      core.info(
         `No approved pull request(s) found matching the label: [${label}]`
       );
     }
