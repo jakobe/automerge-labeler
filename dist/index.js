@@ -529,8 +529,8 @@ function getPullRequestsWithLabels() {
         //     });
         core.info("Querying...");
         const result = yield octokit
-            .graphql(`query getApprovedPullRequestsWithLabels($query: String!) {
-      search(query: $query, type: ISSUE, last: 3) {
+            .graphql(`query {
+      search(query: 'repo:probot/probot', type: ISSUE, last: 3) {
         issueCount
         edges {
           node {
@@ -544,7 +544,7 @@ function getPullRequestsWithLabels() {
         }
       }
     }    
-  `, { query: "repo:probot/probot" })
+  `)
             .catch(error => {
             core.error(Object.keys(error).join("|"));
             core.setFailed(error.message);
