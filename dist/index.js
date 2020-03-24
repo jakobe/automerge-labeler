@@ -452,21 +452,38 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const core = __importStar(__webpack_require__(470));
 const action_1 = __webpack_require__(725);
 function run() {
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const label = core.getInput("label", { required: true });
+            const repo = (_a = process === null || process === void 0 ? void 0 : process.env) === null || _a === void 0 ? void 0 : _a.GITHUB_REPOSITORY;
+            if (!repo) {
+                core.info(`'env.GITHUB_REPOSITORY' not found - exiting...`);
+                return;
+            }
+            const mergeCandidateLabel = core.getInput("label-candidate", {
+                required: true
+            });
+            const automergeLabel = core.getInput("label-automerge");
             const order = core.getInput("order");
             const sortOrder = order === "first" ? "asc" : "desc";
-            core.info(`Looking for approved pull request ${order} labelled by: [${label}]`);
-            const data = yield getPullRequestsWithLabels();
-            const pullRequest = findPullRequest(data, label, sortOrder);
-            if (pullRequest) {
-                const output = JSON.stringify(pullRequest);
+            core.info(`Looking for approved pull request ${order} labelled by: [${mergeCandidateLabel}]`);
+            const candidatePullRequest = yield findPullRequest(repo, mergeCandidateLabel, sortOrder);
+            if (candidatePullRequest) {
+                const output = JSON.stringify(candidatePullRequest, null, 2);
                 core.info(`Found pull request:\n'${output}'`);
                 core.setOutput("pull_request", output);
+                const existingAutomergePullRequest = yield findPullRequest(repo, automergeLabel, "asc");
+                if (!existingAutomergePullRequest) {
+                    core.info(`No existing pull request(s) waiting to be automerged - applying [automerge] label...`);
+                    const [owner, reponame] = repo.split("/");
+                    yield addLabel(owner, reponame, candidatePullRequest.number, automergeLabel);
+                }
+                else {
+                    core.info(`Not applying [automerge] label - existing pull request waiting to be automerged: ${JSON.stringify(existingAutomergePullRequest, null, 2)}`);
+                }
             }
             else {
-                core.info(`No approved pull request(s) found matching the label: [${label}]`);
+                core.info(`No approved pull request(s) found matching the label: [${mergeCandidateLabel}]`);
             }
         }
         catch (error) {
@@ -475,15 +492,27 @@ function run() {
         }
     });
 }
-function getPullRequestsWithLabels() {
-    var _a;
+function addLabel(owner, repo, prNumber, label) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const params = {
+            owner: owner,
+            repo: repo,
+            issue_number: prNumber,
+            labels: [label]
+        };
+        core.info(`Adding label: ${JSON.stringify(params, null, 2)}`);
+        const octokit = new action_1.Octokit();
+        yield octokit.issues.addLabels(params);
+    });
+}
+function getPullRequestsWithLabel(repo, label, reviewDecision) {
     return __awaiter(this, void 0, void 0, function* () {
         const octokit = new action_1.Octokit();
-        const repo = (_a = process === null || process === void 0 ? void 0 : process.env) === null || _a === void 0 ? void 0 : _a.GITHUB_REPOSITORY;
-        core.info(`repo: ${repo}`);
+        const reviewFilter = reviewDecision ? " review:approved" : "";
         const result = yield octokit
-            .graphql(`query {
-      search(query: "repo:${repo} is:pr is:open review:approved", type: ISSUE, first: 100) {
+            .graphql({
+            query: `query getMergeReadyPRs($query_exp:String!) {
+      search(query: $query_exp, type: ISSUE, first: 100) {
         issueCount
          edges {
           node {
@@ -491,8 +520,7 @@ function getPullRequestsWithLabels() {
               title
               url
               number
-              state
-              timelineItems(last: 100, itemTypes: [LABELED_EVENT, UNLABELED_EVENT]) {
+              timelineItems(last: 100, itemTypes: [LABELED_EVENT]) {
                 edges {
                   node {
                     __typename
@@ -505,12 +533,6 @@ function getPullRequestsWithLabels() {
                         name
                       }
                     }
-                    ... on UnlabeledEvent {
-                      createdAt
-                      label {
-                        name
-                      }
-                    }
                   }
                 }
               }
@@ -518,113 +540,44 @@ function getPullRequestsWithLabels() {
           }
         }
       }
-  }`
-        // , { query: `repo:${repo} is:pr is:open review:approved` }
-        )
+  }`,
+            query_exp: `repo:${repo} is:pr is:open ${reviewFilter} label:${label}`
+        })
             .catch(error => {
-            core.error(JSON.stringify(error.errors));
-            core.error(error.request.variables);
+            core.error(JSON.stringify(error));
             core.setFailed(error.message);
         });
-        core.info("Done querying...");
-        core.info(`query result: ${JSON.stringify(result)}`);
+        core.info(`query result: ${JSON.stringify(result, null, 2)}`);
         return result;
     });
 }
-function findPullRequest(payloadFromGraphQl, label, sortOrder) {
-    // const payloadFromGraphQl = {
-    //   data: {
-    //     search: {
-    //       issueCount: 2,
-    //       edges: [
-    //         {
-    //           node: {
-    //             title: "Update main.yml",
-    //             url: "https://github.com/jakobe/github-actions-test/pull/1",
-    //             number: 1,
-    //             state: "OPEN",
-    //             timelineItems: {
-    //               edges: [
-    //                 {
-    //                   node: {
-    //                     __typename: "UnlabeledEvent",
-    //                     createdAt: "2020-03-22T15:45:54Z",
-    //                     label: {
-    //                       name: "merge:ready"
-    //                     }
-    //                   }
-    //                 },
-    //                 {
-    //                   node: {
-    //                     __typename: "LabeledEvent",
-    //                     createdAt: "2020-03-23T15:45:54Z",
-    //                     actor: {
-    //                       login: "hafstad"
-    //                     },
-    //                     label: {
-    //                       name: "merge:ready"
-    //                     }
-    //                   }
-    //                 }
-    //               ]
-    //             }
-    //           }
-    //         },
-    //         {
-    //           node: {
-    //             title: "2 - Update main.yml",
-    //             url: "https://github.com/jakobe/github-actions-test/pull/2",
-    //             number: 2,
-    //             state: "OPEN",
-    //             timelineItems: {
-    //               edges: [
-    //                 {
-    //                   node: {
-    //                     __typename: "LabeledEvent",
-    //                     createdAt: "2020-04-23T15:45:54Z",
-    //                     actor: {
-    //                       login: "jakobe"
-    //                     },
-    //                     label: {
-    //                       name: "merge:ready"
-    //                     }
-    //                   }
-    //                 }
-    //               ]
-    //             }
-    //           }
-    //         }
-    //       ]
-    //     }
-    //   }
-    // };
-    const nextUp = payloadFromGraphQl.search.edges
-        .map(pr => {
-        const matchingLabels = pr.node.timelineItems.edges
-            .filter(labeledEvent => labeledEvent.node.label.name === label)
-            // Order by latest applied:
-            .sort(sortByProperty(labeledEvent => labeledEvent.node.createdAt, "desc"))
-            .map(labeledEvent => {
-            var _a;
-            return labeledEvent.node.__typename === "LabeledEvent"
-                ? {
+function findPullRequest(repo, label, sortOrder) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const data = yield getPullRequestsWithLabel(repo, label, "approved");
+        const firstMatchingPullRequest = data.search.edges
+            .map(pr => {
+            const matchingLabels = pr.node.timelineItems.edges
+                .filter(labeledEvent => labeledEvent.node.label.name === label)
+                // Order by latest applied:
+                .sort(sortByProperty(labeledEvent => labeledEvent.node.createdAt, "desc"))
+                .map(labeledEvent => {
+                return {
                     name: labeledEvent.node.label.name,
                     createdAt: labeledEvent.node.createdAt,
-                    createdBy: (_a = labeledEvent.node.actor) === null || _a === void 0 ? void 0 : _a.login
-                }
-                : undefined;
-        } //Return UnlabeledEvent as undefined
-        );
-        const latestLabel = matchingLabels[0];
-        return {
-            title: pr.node.title,
-            url: pr.node.url,
-            label: latestLabel
-        };
-    })
-        .filter(pr => !!pr.label)
-        .sort(sortByProperty(pr => pr.label.createdAt, sortOrder))[0];
-    return nextUp;
+                    createdBy: labeledEvent.node.actor.login
+                };
+            });
+            const latestLabel = matchingLabels[0];
+            return {
+                title: pr.node.title,
+                number: pr.node.number,
+                url: pr.node.url,
+                label: latestLabel
+            };
+        })
+            .sort(sortByProperty(pr => pr.label.createdAt, sortOrder))[0];
+        return firstMatchingPullRequest;
+    });
 }
 function sortBy(getProperty, direction, a, b) {
     return direction === "asc"
