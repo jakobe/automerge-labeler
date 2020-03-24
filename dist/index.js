@@ -527,7 +527,9 @@ function getPullRequestsWithLabels() {
         //       core.error(error);
         //       core.setFailed(error.message);
         //     });
-        const result = yield octokit.graphql(`query getApprovedPullRequestsWithLabels($query: String!) {
+        core.info("Querying...");
+        const result = yield octokit
+            .graphql(`query getApprovedPullRequestsWithLabels($query: String!) {
       search(query: $query, type: ISSUE, last: 3) {
         issueCount
         edges {
@@ -542,7 +544,12 @@ function getPullRequestsWithLabels() {
         }
       }
     }    
-  `, { query: `repo:octokit/graphql.js` });
+  `, { query: `repo:octokit/graphql.js` })
+            .catch(error => {
+            core.error(error);
+            core.setFailed(error.message);
+        });
+        core.info("Done querying...");
         core.info(`query result: ${JSON.stringify(result)}`);
         return result;
     });
