@@ -544,7 +544,7 @@ function getPullRequestsWithLabels() {
         }
       }
     }    
-  `, { query: "repo:octokit/graphql.js" })
+  `, { query: "repo:probot/probot" })
             .catch(error => {
             core.error(JSON.stringify(error.errors));
             core.error(error.request.variables);
