@@ -459,8 +459,7 @@ function run() {
             const sortOrder = order === "first" ? "asc" : "desc";
             core.info(`Looking for approved pull request ${order} labelled by: [${label}]`);
             const data = yield getPullRequestsWithLabels();
-            core.info(`data from graphQl: ${data}`);
-            const pullRequest = findPullRequest(label, sortOrder);
+            const pullRequest = findPullRequest(data, label, sortOrder);
             if (pullRequest) {
                 const output = JSON.stringify(pullRequest);
                 core.info(`Found pull request:\n'${output}'`);
@@ -532,74 +531,74 @@ function getPullRequestsWithLabels() {
         return result;
     });
 }
-function findPullRequest(label, sortOrder) {
-    const payloadFromGraphQl = {
-        data: {
-            search: {
-                issueCount: 2,
-                edges: [
-                    {
-                        node: {
-                            title: "Update main.yml",
-                            url: "https://github.com/jakobe/github-actions-test/pull/1",
-                            number: 1,
-                            state: "OPEN",
-                            timelineItems: {
-                                edges: [
-                                    {
-                                        node: {
-                                            __typename: "UnlabeledEvent",
-                                            createdAt: "2020-03-22T15:45:54Z",
-                                            label: {
-                                                name: "merge:ready"
-                                            }
-                                        }
-                                    },
-                                    {
-                                        node: {
-                                            __typename: "LabeledEvent",
-                                            createdAt: "2020-03-23T15:45:54Z",
-                                            actor: {
-                                                login: "hafstad"
-                                            },
-                                            label: {
-                                                name: "merge:ready"
-                                            }
-                                        }
-                                    }
-                                ]
-                            }
-                        }
-                    },
-                    {
-                        node: {
-                            title: "2 - Update main.yml",
-                            url: "https://github.com/jakobe/github-actions-test/pull/2",
-                            number: 2,
-                            state: "OPEN",
-                            timelineItems: {
-                                edges: [
-                                    {
-                                        node: {
-                                            __typename: "LabeledEvent",
-                                            createdAt: "2020-04-23T15:45:54Z",
-                                            actor: {
-                                                login: "jakobe"
-                                            },
-                                            label: {
-                                                name: "merge:ready"
-                                            }
-                                        }
-                                    }
-                                ]
-                            }
-                        }
-                    }
-                ]
-            }
-        }
-    };
-    const nextUp = payloadFromGraphQl.data.search.edges
+function findPullRequest(payloadFromGraphQl, label, sortOrder) {
+    // const payloadFromGraphQl = {
+    //   data: {
+    //     search: {
+    //       issueCount: 2,
+    //       edges: [
+    //         {
+    //           node: {
+    //             title: "Update main.yml",
+    //             url: "https://github.com/jakobe/github-actions-test/pull/1",
+    //             number: 1,
+    //             state: "OPEN",
+    //             timelineItems: {
+    //               edges: [
+    //                 {
+    //                   node: {
+    //                     __typename: "UnlabeledEvent",
+    //                     createdAt: "2020-03-22T15:45:54Z",
+    //                     label: {
+    //                       name: "merge:ready"
+    //                     }
+    //                   }
+    //                 },
+    //                 {
+    //                   node: {
+    //                     __typename: "LabeledEvent",
+    //                     createdAt: "2020-03-23T15:45:54Z",
+    //                     actor: {
+    //                       login: "hafstad"
+    //                     },
+    //                     label: {
+    //                       name: "merge:ready"
+    //                     }
+    //                   }
+    //                 }
+    //               ]
+    //             }
+    //           }
+    //         },
+    //         {
+    //           node: {
+    //             title: "2 - Update main.yml",
+    //             url: "https://github.com/jakobe/github-actions-test/pull/2",
+    //             number: 2,
+    //             state: "OPEN",
+    //             timelineItems: {
+    //               edges: [
+    //                 {
+    //                   node: {
+    //                     __typename: "LabeledEvent",
+    //                     createdAt: "2020-04-23T15:45:54Z",
+    //                     actor: {
+    //                       login: "jakobe"
+    //                     },
+    //                     label: {
+    //                       name: "merge:ready"
+    //                     }
+    //                   }
+    //                 }
+    //               ]
+    //             }
+    //           }
+    //         }
+    //       ]
+    //     }
+    //   }
+    // };
+    const nextUp = payloadFromGraphQl.search.edges
         .map(pr => {
         const matchingLabels = pr.node.timelineItems.edges
             .filter(labeledEvent => labeledEvent.node.label.name === label)
