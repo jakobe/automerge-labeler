@@ -527,17 +527,22 @@ function getPullRequestsWithLabels() {
         //       core.error(error);
         //       core.setFailed(error.message);
         //     });
-        const result = yield octokit.graphql(`query getApprovedPullRequestsWithLabels($query:String!) {
-       search(query: $query, type: ISSUE, first: 3) {
-         issueCount
-         edges {
-           node {
-             title
+        const result = yield octokit.graphql(`query getApprovedPullRequestsWithLabels($query: String!) {
+      search(query: $query, type: ISSUE, last: 3) {
+        issueCount
+        edges {
+          node {
+            ... on PullRequest {
+              title
+              author {
+                avatarUrl
+              }
             }
           }
         }
       }
-  `, { query: `repo:octokit/graphql.js is:pr is:open` });
+    }    
+  `, { query: `repo:octokit/graphql.js` });
         core.info(`query result: ${JSON.stringify(result)}`);
         return result;
     });
