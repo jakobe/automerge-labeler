@@ -528,16 +528,15 @@ function getPullRequestsWithLabels() {
         //       core.setFailed(error.message);
         //     });
         const result = yield octokit.graphql(`query getApprovedPullRequestsWithLabels($query:String!) {
-          search(query: $query, type: ISSUE, first: 3) {
-            issueCount
-             edges {
-                node {
-              title
+       search(query: $query, type: ISSUE, first: 3) {
+         issueCount
+         edges {
+           node {
+             title
             }
           }
         }
       }
-    }
   `, { query: `repo:octokit/graphql.js is:pr is:open` });
         core.info(`query result: ${JSON.stringify(result)}`);
         return result;
