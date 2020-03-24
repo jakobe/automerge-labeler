@@ -530,7 +530,7 @@ function getPullRequestsWithLabels() {
         core.info("Querying...");
         const result = yield octokit
             .graphql(`query {
-      search(query: 'repo:probot/probot', type: ISSUE, last: 3) {
+      search(query: "repo:probot/probot", type: ISSUE, last: 3) {
         issueCount
         edges {
           node {
