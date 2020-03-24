@@ -546,7 +546,8 @@ function getPullRequestsWithLabels() {
     }    
   `, { query: "repo:octokit/graphql.js" })
             .catch(error => {
-            core.error(error.request);
+            core.error(JSON.stringify(error.errors));
+            core.error(error.request.variables);
             core.setFailed(error.message);
         });
         core.info("Done querying...");
