@@ -20,7 +20,7 @@
   "homepage": "https://github.com/jakobe/find-pull-request#readme",
   "dependencies": {
     "@actions/core": "^1.2.3",
-    "@actions/github": "^2.1.1"
+    "@octokit/action": "^2.0.0"
   },
   "devDependencies": {
     "@zeit/ncc": "^0.21.1",
