@@ -550,7 +550,7 @@ function getPullRequestsWithLabels() {
         }
       }
     }    
-  `, { "query": `repo:${repo} is:open'` })
+  `, { "query": "repo:probot/probot is:open" })
             .catch(error => {
             core.error(JSON.stringify(error.errors));
             core.error(error.request.variables);
