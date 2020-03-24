@@ -1,5 +1,5 @@
 {
-  "name": "find-pull-request",
+  "name": "automerge-labeler",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -9,15 +9,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jakobe/find-pull-request.git"
+    "url": "git+https://github.com/jakobe/automerge-labeler.git"
   },
   "keywords": [],
   "author": "Jakob Engelbrecht <jakob@basher.dk>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/jakobe/find-pull-request/issues"
+    "url": "https://github.com/jakobe/automerge-labeler/issues"
   },
-  "homepage": "https://github.com/jakobe/find-pull-request#readme",
+  "homepage": "https://github.com/jakobe/automerge-labeler#readme",
   "dependencies": {
     "@actions/core": "^1.2.3",
     "@octokit/action": "^2.0.0"
