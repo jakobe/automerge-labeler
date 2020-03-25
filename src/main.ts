@@ -21,7 +21,8 @@ async function run() {
     const candidatePullRequest = await findPullRequest(
       repo,
       mergeCandidateLabel,
-      sortOrder
+      sortOrder,
+      "approved"
     );
     if (candidatePullRequest) {
       const output = JSON.stringify(candidatePullRequest, null, 2);
@@ -83,7 +84,7 @@ async function addLabel(
 async function getPullRequestsWithLabel(
   repo: string,
   label: string,
-  reviewDecision?: "approved" | null
+  reviewDecision?: "approved"
 ): Promise<GraphQLSearchResult> {
   const octokit = new Octokit();
   const reviewFilter = reviewDecision ? " review:approved" : "";
@@ -133,9 +134,10 @@ async function getPullRequestsWithLabel(
 async function findPullRequest(
   repo: string,
   label: string,
-  sortOrder: "asc" | "desc"
+  sortOrder: "asc" | "desc",
+  reviewDecision?: "approved"
 ): Promise<LabeledPullRequest> {
-  const data = await getPullRequestsWithLabel(repo, label, "approved");
+  const data = await getPullRequestsWithLabel(repo, label, reviewDecision);
   const firstMatchingPullRequest = data.search.edges
     .map(pr => {
       const matchingLabels = pr.node.timelineItems.edges

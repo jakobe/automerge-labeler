@@ -467,7 +467,7 @@ function run() {
             const order = core.getInput("order");
             const sortOrder = order === "first" ? "asc" : "desc";
             core.info(`Looking for approved pull request ${order} labelled by: [${mergeCandidateLabel}]`);
-            const candidatePullRequest = yield findPullRequest(repo, mergeCandidateLabel, sortOrder);
+            const candidatePullRequest = yield findPullRequest(repo, mergeCandidateLabel, sortOrder, "approved");
             if (candidatePullRequest) {
                 const output = JSON.stringify(candidatePullRequest, null, 2);
                 core.info(`Found pull request:\n'${output}'`);
@@ -551,9 +551,9 @@ function getPullRequestsWithLabel(repo, label, reviewDecision) {
         return result;
     });
 }
-function findPullRequest(repo, label, sortOrder) {
+function findPullRequest(repo, label, sortOrder, reviewDecision) {
     return __awaiter(this, void 0, void 0, function* () {
-        const data = yield getPullRequestsWithLabel(repo, label, "approved");
+        const data = yield getPullRequestsWithLabel(repo, label, reviewDecision);
         const firstMatchingPullRequest = data.search.edges
             .map(pr => {
             const matchingLabels = pr.node.timelineItems.edges
