@@ -25,9 +25,10 @@ async function run() {
       "approved"
     );
     if (candidatePullRequest) {
-      const output = JSON.stringify(candidatePullRequest, null, 2);
-      core.info(`Found pull request:\n'${output}'`);
-      core.setOutput("pull_request", output);
+      const candidatePullRequestJSON = toString(candidatePullRequest);
+      core.info(
+        `Found pull request candidate for automerge:\n'${candidatePullRequestJSON}'`
+      );
       const existingAutomergePullRequest = await findPullRequest(
         repo,
         automergeLabel,
@@ -35,8 +36,9 @@ async function run() {
       );
       if (!existingAutomergePullRequest) {
         core.info(
-          `No existing pull request(s) waiting to be automerged - applying [automerge] label...`
+          `No existing pull request(s) waiting to be automerged - applying [automerge] label on: [${candidatePullRequest.title}](${candidatePullRequest.url})`
         );
+        core.setOutput("pull_request", candidatePullRequestJSON);
         const [owner, reponame] = repo.split("/");
         await addLabel(
           owner,
@@ -46,10 +48,8 @@ async function run() {
         );
       } else {
         core.info(
-          `Not applying [automerge] label - existing pull request waiting to be automerged: ${JSON.stringify(
-            existingAutomergePullRequest,
-            null,
-            2
+          `Not applying [automerge] label - existing pull request waiting to be automerged: ${toString(
+            existingAutomergePullRequest
           )}`
         );
       }
@@ -76,7 +76,7 @@ async function addLabel(
     issue_number: prNumber,
     labels: [label]
   };
-  core.info(`Adding label: ${JSON.stringify(params, null, 2)}`);
+  core.info(`Adding label: ${toString(params)}`);
   const octokit = new Octokit();
   await octokit.issues.addLabels(params);
 }
@@ -127,7 +127,9 @@ async function getPullRequestsWithLabel(
       core.setFailed(error.message);
     });
 
-  core.info(`query result: ${JSON.stringify(result, null, 2)}`);
+  core.info(
+    `query result for label [${label}]${reviewFilter}: ${toString(result)}`
+  );
   return result as GraphQLSearchResult;
 }
 
@@ -221,6 +223,10 @@ function sortByProperty<T>(
   return (a: T, b: T) => {
     return sortBy(getProperty, direction, a, b);
   };
+}
+
+function toString(value: any) {
+  return JSON.stringify(value, null, 2);
 }
 
 run();

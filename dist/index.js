@@ -469,17 +469,17 @@ function run() {
             core.info(`Looking for approved pull request ${order} labelled by: [${mergeCandidateLabel}]`);
             const candidatePullRequest = yield findPullRequest(repo, mergeCandidateLabel, sortOrder, "approved");
             if (candidatePullRequest) {
-                const output = JSON.stringify(candidatePullRequest, null, 2);
-                core.info(`Found pull request:\n'${output}'`);
-                core.setOutput("pull_request", output);
+                const candidatePullRequestJSON = toString(candidatePullRequest);
+                core.info(`Found pull request candidate for automerge:\n'${candidatePullRequestJSON}'`);
                 const existingAutomergePullRequest = yield findPullRequest(repo, automergeLabel, "asc");
                 if (!existingAutomergePullRequest) {
-                    core.info(`No existing pull request(s) waiting to be automerged - applying [automerge] label...`);
+                    core.info(`No existing pull request(s) waiting to be automerged - applying [automerge] label on: [${candidatePullRequest.title}](${candidatePullRequest.url})`);
+                    core.setOutput("pull_request", candidatePullRequestJSON);
                     const [owner, reponame] = repo.split("/");
                     yield addLabel(owner, reponame, candidatePullRequest.number, automergeLabel);
                 }
                 else {
-                    core.info(`Not applying [automerge] label - existing pull request waiting to be automerged: ${JSON.stringify(existingAutomergePullRequest, null, 2)}`);
+                    core.info(`Not applying [automerge] label - existing pull request waiting to be automerged: ${toString(existingAutomergePullRequest)}`);
                 }
             }
             else {
@@ -500,7 +500,7 @@ function addLabel(owner, repo, prNumber, label) {
             issue_number: prNumber,
             labels: [label]
         };
-        core.info(`Adding label: ${JSON.stringify(params, null, 2)}`);
+        core.info(`Adding label: ${toString(params)}`);
         const octokit = new action_1.Octokit();
         yield octokit.issues.addLabels(params);
     });
@@ -547,7 +547,7 @@ function getPullRequestsWithLabel(repo, label, reviewDecision) {
             core.error(JSON.stringify(error));
             core.setFailed(error.message);
         });
-        core.info(`query result: ${JSON.stringify(result, null, 2)}`);
+        core.info(`query result for label [${label}]${reviewFilter}: ${toString(result)}`);
         return result;
     });
 }
@@ -588,6 +588,9 @@ function sortByProperty(getProperty, direction) {
     return (a, b) => {
         return sortBy(getProperty, direction, a, b);
     };
+}
+function toString(value) {
+    return JSON.stringify(value, null, 2);
 }
 run();
 
