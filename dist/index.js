@@ -1730,10 +1730,11 @@ function run() {
                 core.info(`Applying [automerge] label on: [${candidatePullRequest.title}](${candidatePullRequest.url})`);
                 const [owner, reponame] = repo.split("/");
                 yield addLabel(octokit, owner, reponame, candidatePullRequest.number, automergeLabel);
+                const { login: createdBy } = yield (yield octokit.users.getAuthenticated()).data;
                 candidatePullRequest.label = {
                     name: automergeLabel,
-                    createdAt: new Date().toUTCString()
-                    //createdBy: octokit.getUser??
+                    createdAt: new Date().toISOString(),
+                    createdBy
                 };
                 core.setOutput("pull_request", toString(candidatePullRequest));
             }

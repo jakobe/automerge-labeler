@@ -120,10 +120,13 @@ async function run() {
         candidatePullRequest.number,
         automergeLabel
       );
+      const { login: createdBy } = await (
+        await octokit.users.getAuthenticated()
+      ).data;
       candidatePullRequest.label = {
         name: automergeLabel,
-        createdAt: new Date().toUTCString()
-        //createdBy: octokit.getUser??
+        createdAt: new Date().toISOString(),
+        createdBy
       };
       core.setOutput("pull_request", toString(candidatePullRequest));
     } else {
@@ -247,7 +250,7 @@ async function findPullRequest(
   return firstMatchingPullRequest;
 }
 
-type Label = { name: string; createdAt: string };
+type Label = { name: string; createdAt: string; createdBy: string };
 type LabeledPullRequest = {
   title: string;
   number: number;
