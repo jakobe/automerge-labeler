@@ -41,6 +41,10 @@ async function run() {
       return;
     }
 
+    core.info(
+      `No existing pull request(s) waiting to be automerged - checking event type...`
+    );
+
     switch (github.context.eventName) {
       case "push":
         const pushPayload = payload as Webhooks.WebhookPayloadPush;
@@ -89,7 +93,7 @@ async function run() {
     }
 
     core.info(
-      `No existing pull request(s) waiting to be automerged - looking for approved pull request ${order} labelled by: [${mergeCandidateLabel}]`
+      `Looking for approved pull request ${order} labelled by: [${mergeCandidateLabel}]`
     );
 
     const candidatePullRequest = await findPullRequest(

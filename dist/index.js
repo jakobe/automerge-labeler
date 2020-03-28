@@ -1685,6 +1685,7 @@ function run() {
                 core.setOutput("pull_request", toString(existingAutomergePullRequest));
                 return;
             }
+            core.info(`No existing pull request(s) waiting to be automerged - checking event type...`);
             switch (github.context.eventName) {
                 case "push":
                     const pushPayload = payload;
@@ -1722,7 +1723,7 @@ function run() {
                     core.info(`Unknown event:\n'${toString(payload)}'`);
                     break;
             }
-            core.info(`No existing pull request(s) waiting to be automerged - looking for approved pull request ${order} labelled by: [${mergeCandidateLabel}]`);
+            core.info(`Looking for approved pull request ${order} labelled by: [${mergeCandidateLabel}]`);
             const candidatePullRequest = yield findPullRequest(octokit, repo, mergeCandidateLabel, sortOrder, "approved");
             if (candidatePullRequest) {
                 core.info(`Found pull request candidate for automerge:\n'${toString(candidatePullRequest)}'`);
