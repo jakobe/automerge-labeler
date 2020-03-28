@@ -20,7 +20,8 @@
   "homepage": "https://github.com/jakobe/automerge-labeler#readme",
   "dependencies": {
     "@actions/core": "^1.2.3",
-    "@octokit/action": "^2.0.0"
+    "@actions/github": "^2.1.1",
+    "@octokit/webhooks": "^7.1.1"
   },
   "devDependencies": {
     "@zeit/ncc": "^0.21.1",
