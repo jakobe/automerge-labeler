@@ -14,40 +14,46 @@ async function run() {
       core.info(`'env.GITHUB_REPOSITORY' not found - exiting...`);
       return;
     }
-    const octokit = new github.GitHub(token);
-    const { payload: event } = github.context;
-    switch (github.context.eventName) {
-      case "push":
-        const pushPayload = github.context
-          .payload as Webhooks.WebhookPayloadPush;
-        core.info(`Push event:\n${toString(pushPayload)}`);
-        break;
-      case "pull_request":
-        const pullRequestPayload = github.context
-          .payload as Webhooks.WebhookPayloadPullRequest;
-        core.info(`Pull Request event:\n${toString(pullRequestPayload)}`);
-        break;
-      case "pull_request_review":
-        const pullrequestReviewPayload = github.context
-          .payload as Webhooks.WebhookPayloadPullRequestReview;
-        core.info(
-          `Pull Request Review event:\n${toString(pullrequestReviewPayload)}`
-        );
-        break;
-      default:
-        core.info(`Unknow event:\n'${toString(event)}'`);
-        break;
-    }
-
     const mergeCandidateLabel = core.getInput("label-candidate", {
       required: true
     });
     const automergeLabel = core.getInput("label-automerge");
     const order = core.getInput("order") as "first" | "last";
     const sortOrder = order === "first" ? "asc" : "desc";
+    const { payload } = github.context;
+
+    switch (github.context.eventName) {
+      case "push":
+        const pushPayload = payload as Webhooks.WebhookPayloadPush;
+        core.info(`Push event:\n${toString(pushPayload)}`);
+        break;
+      case "pull_request":
+        const pullRequestPayload = payload as Webhooks.WebhookPayloadPullRequest;
+        core.info(`Pull Request event:\n${toString(pullRequestPayload)}`);
+        if (pullRequestPayload.action === "labeled") {
+          const label = pullRequestPayload["label"]?.name;
+          if (label != mergeCandidateLabel) {
+            core.info(
+              `Label from LabeledEvent doesn't match candidate: [${mergeCandidateLabel}] != [${label}] - exiting...`
+            );
+          }
+        }
+        break;
+      case "pull_request_review":
+        const pullrequestReviewPayload = payload as Webhooks.WebhookPayloadPullRequestReview;
+        core.info(
+          `Pull Request Review event:\n${toString(pullrequestReviewPayload)}`
+        );
+        break;
+      default:
+        core.info(`Unknown event:\n'${toString(payload)}'`);
+        break;
+    }
+
     core.info(
       `Looking for approved pull request ${order} labelled by: [${mergeCandidateLabel}]`
     );
+    const octokit = new github.GitHub(token);
     const candidatePullRequest = await findPullRequest(
       octokit,
       repo,

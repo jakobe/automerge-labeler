@@ -1467,7 +1467,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const core = __importStar(__webpack_require__(470));
 const github = __importStar(__webpack_require__(469));
 function run() {
-    var _a, _b;
+    var _a, _b, _c;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const token = (_a = process === null || process === void 0 ? void 0 : process.env) === null || _a === void 0 ? void 0 : _a.GITHUB_TOKEN;
@@ -1480,35 +1480,38 @@ function run() {
                 core.info(`'env.GITHUB_REPOSITORY' not found - exiting...`);
                 return;
             }
-            const octokit = new github.GitHub(token);
-            const { payload: event } = github.context;
-            switch (github.context.eventName) {
-                case "push":
-                    const pushPayload = github.context
-                        .payload;
-                    core.info(`Push event:\n${toString(pushPayload)}`);
-                    break;
-                case "pull_request":
-                    const pullRequestPayload = github.context
-                        .payload;
-                    core.info(`Pull Request event:\n${toString(pullRequestPayload)}`);
-                    break;
-                case "pull_request_review":
-                    const pullrequestReviewPayload = github.context
-                        .payload;
-                    core.info(`Pull Request Review event:\n${toString(pullrequestReviewPayload)}`);
-                    break;
-                default:
-                    core.info(`Unknow event:\n'${toString(event)}'`);
-                    break;
-            }
             const mergeCandidateLabel = core.getInput("label-candidate", {
                 required: true
             });
             const automergeLabel = core.getInput("label-automerge");
             const order = core.getInput("order");
             const sortOrder = order === "first" ? "asc" : "desc";
+            const { payload } = github.context;
+            switch (github.context.eventName) {
+                case "push":
+                    const pushPayload = payload;
+                    core.info(`Push event:\n${toString(pushPayload)}`);
+                    break;
+                case "pull_request":
+                    const pullRequestPayload = payload;
+                    core.info(`Pull Request event:\n${toString(pullRequestPayload)}`);
+                    if (pullRequestPayload.action === "labeled") {
+                        const label = (_c = pullRequestPayload["label"]) === null || _c === void 0 ? void 0 : _c.name;
+                        if (label != mergeCandidateLabel) {
+                            core.info(`Label from LabeledEvent doesn't match candidate: [${mergeCandidateLabel}] != [${label}] - exiting...`);
+                        }
+                    }
+                    break;
+                case "pull_request_review":
+                    const pullrequestReviewPayload = payload;
+                    core.info(`Pull Request Review event:\n${toString(pullrequestReviewPayload)}`);
+                    break;
+                default:
+                    core.info(`Unknown event:\n'${toString(payload)}'`);
+                    break;
+            }
             core.info(`Looking for approved pull request ${order} labelled by: [${mergeCandidateLabel}]`);
+            const octokit = new github.GitHub(token);
             const candidatePullRequest = yield findPullRequest(octokit, repo, mergeCandidateLabel, sortOrder, "approved");
             if (candidatePullRequest) {
                 const candidatePullRequestJSON = toString(candidatePullRequest);
