@@ -1,14 +1,44 @@
 import * as core from "@actions/core";
-
-import { Octokit } from "@octokit/action";
+import * as github from "@actions/github";
+import * as Webhooks from "@octokit/webhooks";
 
 async function run() {
   try {
+    const token = process?.env?.GITHUB_TOKEN;
+    if (!token) {
+      core.info(`'env.GITHUB_TOKEN' not found - exiting...`);
+      return;
+    }
     const repo = process?.env?.GITHUB_REPOSITORY;
     if (!repo) {
       core.info(`'env.GITHUB_REPOSITORY' not found - exiting...`);
       return;
     }
+    const octokit = new github.GitHub(token);
+    const { payload: event } = github.context;
+    switch (github.context.eventName) {
+      case "push":
+        const pushPayload = github.context
+          .payload as Webhooks.WebhookPayloadPush;
+        core.info(`Push event:\n${toString(pushPayload)}`);
+        break;
+      case "pull_request":
+        const pullRequestPayload = github.context
+          .payload as Webhooks.WebhookPayloadPullRequest;
+        core.info(`Pull Request event:\n${toString(pullRequestPayload)}`);
+        break;
+      case "pull_request_review":
+        const pullrequestReviewPayload = github.context
+          .payload as Webhooks.WebhookPayloadPullRequestReview;
+        core.info(
+          `Pull Request Review event:\n${toString(pullrequestReviewPayload)}`
+        );
+        break;
+      default:
+        core.info(`Unknow event:\n'${toString(event)}'`);
+        break;
+    }
+
     const mergeCandidateLabel = core.getInput("label-candidate", {
       required: true
     });
@@ -19,6 +49,7 @@ async function run() {
       `Looking for approved pull request ${order} labelled by: [${mergeCandidateLabel}]`
     );
     const candidatePullRequest = await findPullRequest(
+      octokit,
       repo,
       mergeCandidateLabel,
       sortOrder,
@@ -30,6 +61,7 @@ async function run() {
         `Found pull request candidate for automerge:\n'${candidatePullRequestJSON}'`
       );
       const existingAutomergePullRequest = await findPullRequest(
+        octokit,
         repo,
         automergeLabel,
         "asc"
@@ -41,6 +73,7 @@ async function run() {
         core.setOutput("pull_request", candidatePullRequestJSON);
         const [owner, reponame] = repo.split("/");
         await addLabel(
+          octokit,
           owner,
           reponame,
           candidatePullRequest.number,
@@ -65,6 +98,7 @@ async function run() {
 }
 
 async function addLabel(
+  octokit: github.GitHub,
   owner: string,
   repo: string,
   prNumber: number,
@@ -77,16 +111,16 @@ async function addLabel(
     labels: [label]
   };
   core.info(`Adding label: ${toString(params)}`);
-  const octokit = new Octokit();
+
   await octokit.issues.addLabels(params);
 }
 
 async function getPullRequestsWithLabel(
+  octokit: github.GitHub,
   repo: string,
   label: string,
   reviewDecision?: "approved"
 ): Promise<GraphQLSearchResult> {
-  const octokit = new Octokit();
   const reviewFilter = reviewDecision ? " review:approved" : "";
   const result = await octokit
     .graphql({
@@ -134,12 +168,18 @@ async function getPullRequestsWithLabel(
 }
 
 async function findPullRequest(
+  octokit: github.GitHub,
   repo: string,
   label: string,
   sortOrder: "asc" | "desc",
   reviewDecision?: "approved"
 ): Promise<LabeledPullRequest> {
-  const data = await getPullRequestsWithLabel(repo, label, reviewDecision);
+  const data = await getPullRequestsWithLabel(
+    octokit,
+    repo,
+    label,
+    reviewDecision
+  );
   const firstMatchingPullRequest = data.search.edges
     .map(pr => {
       const matchingLabels = pr.node.timelineItems.edges
