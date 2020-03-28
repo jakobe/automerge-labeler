@@ -52,10 +52,27 @@ async function run() {
         break;
     }
 
-    core.info(
-      `Looking for approved pull request ${order} labelled by: [${mergeCandidateLabel}]`
-    );
     const octokit = new github.GitHub(token);
+
+    const existingAutomergePullRequest = await findPullRequest(
+      octokit,
+      repo,
+      automergeLabel,
+      "asc"
+    );
+    if (existingAutomergePullRequest) {
+      core.info(
+        `NOT applying [automerge] label - found existing pull request waiting to be automerged: ${toString(
+          existingAutomergePullRequest
+        )}`
+      );
+      return;
+    }
+
+    core.info(
+      `No existing pull request(s) waiting to be automerged - looking for approved pull request ${order} labelled by: [${mergeCandidateLabel}]`
+    );
+
     const candidatePullRequest = await findPullRequest(
       octokit,
       repo,
@@ -68,32 +85,18 @@ async function run() {
       core.info(
         `Found pull request candidate for automerge:\n'${candidatePullRequestJSON}'`
       );
-      const existingAutomergePullRequest = await findPullRequest(
-        octokit,
-        repo,
-        automergeLabel,
-        "asc"
+      core.info(
+        `Applying [automerge] label on: [${candidatePullRequest.title}](${candidatePullRequest.url})`
       );
-      if (!existingAutomergePullRequest) {
-        core.info(
-          `No existing pull request(s) waiting to be automerged - applying [automerge] label on: [${candidatePullRequest.title}](${candidatePullRequest.url})`
-        );
-        core.setOutput("pull_request", candidatePullRequestJSON);
-        const [owner, reponame] = repo.split("/");
-        await addLabel(
-          octokit,
-          owner,
-          reponame,
-          candidatePullRequest.number,
-          automergeLabel
-        );
-      } else {
-        core.info(
-          `Not applying [automerge] label - existing pull request waiting to be automerged: ${toString(
-            existingAutomergePullRequest
-          )}`
-        );
-      }
+      core.setOutput("pull_request", candidatePullRequestJSON);
+      const [owner, reponame] = repo.split("/");
+      await addLabel(
+        octokit,
+        owner,
+        reponame,
+        candidatePullRequest.number,
+        automergeLabel
+      );
     } else {
       core.info(
         `No approved pull request(s) found matching the label: [${mergeCandidateLabel}]`
