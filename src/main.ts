@@ -31,6 +31,11 @@ async function run() {
       case "pull_request":
         const pullRequestPayload = payload as Webhooks.WebhookPayloadPullRequest;
         core.info(`Pull Request event:\n${toString(pullRequestPayload)}`);
+        core.info(
+          `Pull Request event.mergeable_state:\n${toString(
+            pullRequestPayload.pull_request.mergeable_state
+          )}`
+        );
         if (pullRequestPayload.action === "labeled") {
           core.info(`Action: pull_request.labeled`);
           const label = pullRequestPayload["label"]?.name;
