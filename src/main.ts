@@ -31,11 +31,13 @@ async function run() {
         const pullRequestPayload = payload as Webhooks.WebhookPayloadPullRequest;
         core.info(`Pull Request event:\n${toString(pullRequestPayload)}`);
         if (pullRequestPayload.action === "labeled") {
+          core.info(`Action: pull_request.labeled`);
           const label = pullRequestPayload["label"]?.name;
           if (label != mergeCandidateLabel) {
             core.info(
               `Label from LabeledEvent doesn't match candidate: [${mergeCandidateLabel}] != [${label}] - exiting...`
             );
+            return;
           }
         }
         break;
