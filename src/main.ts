@@ -32,28 +32,25 @@ async function run() {
         const pullRequestPayload = payload as Webhooks.WebhookPayloadPullRequest;
         core.info(`Pull Request event:\n${toString(pullRequestPayload)}`);
         core.info(
-          `Pull Request event.mergeable_state:\n${toString(
+          `Pull Request event.mergeable_state: ${toString(
             pullRequestPayload.pull_request.mergeable_state
           )}`
         );
         if (pullRequestPayload.action === "labeled") {
           core.info(`Action: pull_request.labeled`);
+          const octokit = new Octokit({
+            auth: `token ${token}`
+          });
+          const [owner, reponame] = repo.split("/");
+          const { data: pull_request } = await octokit.pulls.get({
+            owner: owner,
+            repo: reponame,
+            pull_number: pullRequestPayload.number
+          });
+          const { mergeable_state } = pull_request;
+          core.info(`mergeable_state from @octokit/rest: ${mergeable_state}`);
+
           const label = pullRequestPayload["label"]?.name;
-          if (label === automergeLabel) {
-            const octokit = new Octokit({
-              auth: `token ${token}`
-            });
-            const [owner, reponame] = repo.split("/");
-            const { data: pull_request } = await octokit.pulls.get({
-              owner: owner,
-              repo: reponame,
-              pull_number: pullRequestPayload.number
-            });
-
-            const { mergeable_state } = pull_request;
-
-            core.info(`mergeable_state from @octokit/rest: ${mergeable_state}`);
-          }
           if (label != mergeCandidateLabel) {
             core.info(
               `Label from LabeledEvent doesn't match candidate: [${mergeCandidateLabel}] != [${label}] - exiting...`
