@@ -1,6 +1,7 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
 import * as Webhooks from "@octokit/webhooks";
+import { Octokit } from "@octokit/rest";
 
 async function run() {
   try {
@@ -33,6 +34,21 @@ async function run() {
         if (pullRequestPayload.action === "labeled") {
           core.info(`Action: pull_request.labeled`);
           const label = pullRequestPayload["label"]?.name;
+          if (label === automergeLabel) {
+            const octokit = new Octokit({
+              auth: `token ${token}`
+            });
+            const [owner, reponame] = repo.split("/");
+            const { data: pull_request } = await octokit.pulls.get({
+              owner: owner,
+              repo: reponame,
+              pull_number: pullRequestPayload.number
+            });
+
+            const { mergeable_state } = pull_request;
+
+            core.info(`mergeable_state from @octokit/rest: ${mergeable_state}`);
+          }
           if (label != mergeCandidateLabel) {
             core.info(
               `Label from LabeledEvent doesn't match candidate: [${mergeCandidateLabel}] != [${label}] - exiting...`
