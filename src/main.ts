@@ -84,6 +84,7 @@ async function run() {
           existingAutomergePullRequest
         )}`
       );
+      core.setOutput("pull_request", toString(existingAutomergePullRequest));
       return;
     }
 
@@ -99,14 +100,14 @@ async function run() {
       "approved"
     );
     if (candidatePullRequest) {
-      const candidatePullRequestJSON = toString(candidatePullRequest);
       core.info(
-        `Found pull request candidate for automerge:\n'${candidatePullRequestJSON}'`
+        `Found pull request candidate for automerge:\n'${toString(
+          candidatePullRequest
+        )}'`
       );
       core.info(
         `Applying [automerge] label on: [${candidatePullRequest.title}](${candidatePullRequest.url})`
       );
-      core.setOutput("pull_request", candidatePullRequestJSON);
       const [owner, reponame] = repo.split("/");
       await addLabel(
         octokit,
@@ -115,6 +116,12 @@ async function run() {
         candidatePullRequest.number,
         automergeLabel
       );
+      candidatePullRequest.label = {
+        name: automergeLabel,
+        createdAt: new Date().toUTCString()
+        //createdBy: octokit.getUser??
+      };
+      core.setOutput("pull_request", toString(candidatePullRequest));
     } else {
       core.info(
         `No approved pull request(s) found matching the label: [${mergeCandidateLabel}]`
@@ -141,7 +148,7 @@ async function addLabel(
   };
   core.info(`Adding label: ${toString(params)}`);
 
-  await octokit.issues.addLabels(params);
+  return await octokit.issues.addLabels(params);
 }
 
 async function getPullRequestsWithLabel(

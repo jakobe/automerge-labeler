@@ -1719,17 +1719,22 @@ function run() {
             const existingAutomergePullRequest = yield findPullRequest(octokit, repo, automergeLabel, "asc");
             if (existingAutomergePullRequest) {
                 core.info(`NOT applying [automerge] label - found existing pull request waiting to be automerged: ${toString(existingAutomergePullRequest)}`);
+                core.setOutput("pull_request", toString(existingAutomergePullRequest));
                 return;
             }
             core.info(`No existing pull request(s) waiting to be automerged - looking for approved pull request ${order} labelled by: [${mergeCandidateLabel}]`);
             const candidatePullRequest = yield findPullRequest(octokit, repo, mergeCandidateLabel, sortOrder, "approved");
             if (candidatePullRequest) {
-                const candidatePullRequestJSON = toString(candidatePullRequest);
-                core.info(`Found pull request candidate for automerge:\n'${candidatePullRequestJSON}'`);
+                core.info(`Found pull request candidate for automerge:\n'${toString(candidatePullRequest)}'`);
                 core.info(`Applying [automerge] label on: [${candidatePullRequest.title}](${candidatePullRequest.url})`);
-                core.setOutput("pull_request", candidatePullRequestJSON);
                 const [owner, reponame] = repo.split("/");
                 yield addLabel(octokit, owner, reponame, candidatePullRequest.number, automergeLabel);
+                candidatePullRequest.label = {
+                    name: automergeLabel,
+                    createdAt: new Date().toUTCString()
+                    //createdBy: octokit.getUser??
+                };
+                core.setOutput("pull_request", toString(candidatePullRequest));
             }
             else {
                 core.info(`No approved pull request(s) found matching the label: [${mergeCandidateLabel}]`);
@@ -1750,7 +1755,7 @@ function addLabel(octokit, owner, repo, prNumber, label) {
             labels: [label]
         };
         core.info(`Adding label: ${toString(params)}`);
-        yield octokit.issues.addLabels(params);
+        return yield octokit.issues.addLabels(params);
     });
 }
 function getPullRequestsWithLabel(octokit, repo, label, reviewDecision) {
