@@ -23,6 +23,24 @@ async function run() {
     const sortOrder = order === "first" ? "asc" : "desc";
     const { payload } = github.context;
 
+    const octokit = new github.GitHub(token);
+
+    const existingAutomergePullRequest = await findPullRequest(
+      octokit,
+      repo,
+      automergeLabel,
+      "asc"
+    );
+    if (existingAutomergePullRequest) {
+      core.info(
+        `NOT applying [automerge] label - found existing pull request waiting to be automerged: ${toString(
+          existingAutomergePullRequest
+        )}`
+      );
+      core.setOutput("pull_request", toString(existingAutomergePullRequest));
+      return;
+    }
+
     switch (github.context.eventName) {
       case "push":
         const pushPayload = payload as Webhooks.WebhookPayloadPush;
@@ -68,24 +86,6 @@ async function run() {
       default:
         core.info(`Unknown event:\n'${toString(payload)}'`);
         break;
-    }
-
-    const octokit = new github.GitHub(token);
-
-    const existingAutomergePullRequest = await findPullRequest(
-      octokit,
-      repo,
-      automergeLabel,
-      "asc"
-    );
-    if (existingAutomergePullRequest) {
-      core.info(
-        `NOT applying [automerge] label - found existing pull request waiting to be automerged: ${toString(
-          existingAutomergePullRequest
-        )}`
-      );
-      core.setOutput("pull_request", toString(existingAutomergePullRequest));
-      return;
     }
 
     core.info(

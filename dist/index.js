@@ -1678,6 +1678,13 @@ function run() {
             const order = core.getInput("order");
             const sortOrder = order === "first" ? "asc" : "desc";
             const { payload } = github.context;
+            const octokit = new github.GitHub(token);
+            const existingAutomergePullRequest = yield findPullRequest(octokit, repo, automergeLabel, "asc");
+            if (existingAutomergePullRequest) {
+                core.info(`NOT applying [automerge] label - found existing pull request waiting to be automerged: ${toString(existingAutomergePullRequest)}`);
+                core.setOutput("pull_request", toString(existingAutomergePullRequest));
+                return;
+            }
             switch (github.context.eventName) {
                 case "push":
                     const pushPayload = payload;
@@ -1714,13 +1721,6 @@ function run() {
                 default:
                     core.info(`Unknown event:\n'${toString(payload)}'`);
                     break;
-            }
-            const octokit = new github.GitHub(token);
-            const existingAutomergePullRequest = yield findPullRequest(octokit, repo, automergeLabel, "asc");
-            if (existingAutomergePullRequest) {
-                core.info(`NOT applying [automerge] label - found existing pull request waiting to be automerged: ${toString(existingAutomergePullRequest)}`);
-                core.setOutput("pull_request", toString(existingAutomergePullRequest));
-                return;
             }
             core.info(`No existing pull request(s) waiting to be automerged - looking for approved pull request ${order} labelled by: [${mergeCandidateLabel}]`);
             const candidatePullRequest = yield findPullRequest(octokit, repo, mergeCandidateLabel, sortOrder, "approved");
