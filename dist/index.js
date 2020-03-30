@@ -1682,7 +1682,9 @@ function run() {
             const existingAutomergePullRequest = yield findPullRequest(octokit, repo, automergeLabel, "asc");
             if (existingAutomergePullRequest) {
                 core.info(`NOT applying [automerge] label - found existing pull request waiting to be automerged: ${toString(existingAutomergePullRequest)}`);
-                core.setOutput("pull_request", toString(existingAutomergePullRequest));
+                if (existingAutomergePullRequest.reviewDecision === "APPROVED") {
+                    core.setOutput("pull_request", toString(existingAutomergePullRequest));
+                }
                 return;
             }
             core.info(`No existing pull request(s) waiting to be automerged - checking event type...`);
@@ -1774,6 +1776,7 @@ function getPullRequestsWithLabel(octokit, repo, label, reviewDecision) {
               title
               url
               number
+              reviewDecision
               timelineItems(last: 100, itemTypes: [LABELED_EVENT]) {
                 edges {
                   node {
@@ -1826,6 +1829,7 @@ function findPullRequest(octokit, repo, label, sortOrder, reviewDecision) {
                 title: pr.node.title,
                 number: pr.node.number,
                 url: pr.node.url,
+                reviewDecision: pr.node.reviewDecision,
                 label: latestLabel
             };
         })

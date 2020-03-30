@@ -37,7 +37,9 @@ async function run() {
           existingAutomergePullRequest
         )}`
       );
-      core.setOutput("pull_request", toString(existingAutomergePullRequest));
+      if (existingAutomergePullRequest.reviewDecision === "APPROVED") {
+        core.setOutput("pull_request", toString(existingAutomergePullRequest));
+      }
       return;
     }
 
@@ -176,6 +178,7 @@ async function getPullRequestsWithLabel(
               title
               url
               number
+              reviewDecision
               timelineItems(last: 100, itemTypes: [LABELED_EVENT]) {
                 edges {
                   node {
@@ -243,6 +246,7 @@ async function findPullRequest(
         title: pr.node.title,
         number: pr.node.number,
         url: pr.node.url,
+        reviewDecision: pr.node.reviewDecision,
         label: latestLabel
       };
     })
@@ -255,6 +259,7 @@ type LabeledPullRequest = {
   title: string;
   number: number;
   url: string;
+  reviewDecision: string;
   label?: Label;
 };
 type GraphQLSearchResult = {
@@ -266,6 +271,7 @@ type GraphQLSearchResult = {
           title: string;
           url: string;
           number: number;
+          reviewDecision: string;
           timelineItems: {
             edges: [
               {
